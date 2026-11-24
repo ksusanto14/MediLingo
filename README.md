@@ -4,9 +4,8 @@
 
 **Live demo:** https://ksusanto14.github.io/MediLingo/ *(available once GitHub Pages is turned on)*
 
-MediLingo was built for an AI in Healthcare group project in *Management Principles and Practice* at Bryant University (Dr. Kathryn Ostermeier, Fall 2026).
+MediLingo was built for an AI in Healthcare group project in *Management Principles and Practice* at Bryant University
 
-**Team:** Bobby Barlett, Eve Colombari, Allison Courtemanche, Katie Quinn, Kael Susanto
 
 ---
 

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MediLingo Receptionist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Next:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, clinical, warm; a front desk that finally answers everyone.
+   IDEA: a clinic's appointment book with three pages: the patient's chat, the desk's week, the manager's report.
+   PICTURE: the working app: a guided chat with a live appointment card, then a calendar, then charts.
+   COLOUR and TYPE: white and deep cobalt, coral only for urgent; Atkinson Hyperlegible, made for low-vision readers.
+   LAYOUT: brand bar with three tabs, one view at a time, two columns that stack under 900px. */
+:root{color-scheme:light dark;--bg:light-dark(#f4f6fb,#0f1424);--card:light-dark(#fff,#171e33);--ink:light-dark(#121a33,#e9edf8);--mute:light-dark(#545e7d,#a3adca);--line:light-dark(#dde2ef,#2a3352);--pri:light-dark(#2340d9,#8094ff);--priInk:light-dark(#fff,#0f1424);--soft:light-dark(#e8ecff,#222c50);--alert:light-dark(#c9302a,#ff7a6e);--alertSoft:light-dark(#fde9e7,#3a1f24);--ok:light-dark(#1d7a4f,#5fd39a);--s1:light-dark(#2a78d6,#3987e5);--s2:light-dark(#eb6834,#d95926);--s3:light-dark(#1baf7a,#199e70);--fs:17px}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+:root.big{--fs:20px}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs)/1.5 "Atkinson Hyperlegible",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",sans-serif;margin:0;text-wrap:balance;line-height:1.1}
+header{background:var(--pri);color:var(--priInk)}
+.bar{max-width:1320px;margin:auto;padding:14px max(2vw,12px) 0;display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between}
+.brand b{font:800 30px/1 "Atkinson Hyperlegible Next",sans-serif;display:block}.brand span{font-size:14px;opacity:.9}
+nav{max-width:1320px;margin:auto;padding:10px max(2vw,12px) 0;display:flex;gap:4px;overflow-x:auto}
+nav a{flex:none;color:inherit;text-decoration:none;padding:12px 18px;border-radius:12px 12px 0 0;font-weight:700;opacity:.85;display:flex;gap:8px;align-items:center}
+nav a[aria-current=page]{background:var(--bg);color:var(--ink);opacity:1}
+.badge{background:var(--alert);color:#fff;border-radius:999px;font-size:13px;padding:0 7px;min-width:22px;text-align:center}
+.badge:empty{display:none}
+button,select,input{font:inherit;color:inherit}
+.b{min-height:44px;padding:8px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.b:hover{border-color:var(--pri)}
+.b[aria-pressed=true],.b.pri{background:var(--pri);color:var(--priInk);border-color:var(--pri)}
+.b.warn{border-color:var(--alert);color:var(--alert)}
+.b.ghost{background:transparent;border-color:rgba(255,255,255,.5);color:var(--priInk)}
+.b:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+header :focus-visible{outline-color:currentColor}
+select{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 10px;font-size:16px}
+main{max-width:1320px;margin:auto;padding:20px max(2vw,12px) 48px}
+.view{display:none}.view.on{display:block}
+.two{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);gap:18px;align-items:start}
+@media(max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.pad{padding:16px 18px}
+.ph{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+h2{font-size:24px}h3{font-size:19px;margin-bottom:10px}
+.lbl{font-size:14px;color:var(--mute)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+ol.steps{list-style:none;margin:0;padding:12px 18px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;border-bottom:1px solid var(--line)}
+ol.steps li{font-size:14px;color:var(--mute);border-top:4px solid var(--line);padding-top:6px}
+ol.steps li.done{border-color:var(--pri);color:var(--ink)}ol.steps li.cur{border-color:var(--pri);color:var(--pri);font-weight:700}
+#log{min-height:380px;max-height:56vh;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:86%;padding:10px 14px;border-radius:16px;white-space:pre-line}
+.bot{background:var(--soft);align-self:flex-start;border-bottom-left-radius:4px}
+.me{background:var(--pri);color:var(--priInk);align-self:flex-end;border-bottom-right-radius:4px}
+.urg{background:var(--alertSoft);color:var(--ink);border:2px solid var(--alert)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start}
+.chips .b{border-radius:999px}
+.chips.big .b{border-radius:14px;text-align:left;min-height:52px}
+video{max-width:220px;border-radius:12px;align-self:flex-end}
+.cmp{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.cmp input{flex:1 1 200px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 14px;font-size:16px}
+.hint{padding:0 18px 14px;font-size:14px;color:var(--mute);margin:0}
+#aslBar{display:none;padding:12px 18px 0}
+#aslBar label{display:flex;align-items:center;justify-content:center;min-height:52px;border:2px dashed var(--pri);border-radius:12px;cursor:pointer;color:var(--pri);font-weight:700;text-align:center;padding:6px}
+#aslBar input{position:absolute;opacity:0;width:1px;height:1px}
+.card dl{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;margin:0}
+.card dt{font-size:14px;color:var(--mute);margin-top:10px}.card dd{margin:0;font-weight:700}.card dd.no{font-weight:400;color:var(--mute)}
+.conf{margin-top:14px;padding:12px;border-radius:12px;background:var(--soft);font-weight:700;display:none}
+.side{display:grid;gap:18px}
+.help p{margin:6px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.stat{background:var(--card);padding:14px 18px}.stat b{display:block;font:800 clamp(26px,3vw,34px)/1.1 "Atkinson Hyperlegible Next",sans-serif}.stat span{font-size:14px;color:var(--mute)}
+.stat em{font-style:normal;font-size:14px;font-weight:700}.up{color:var(--ok)}.dn{color:var(--alert)}
+.cal{overflow-x:auto;padding:12px 18px}
+.grid{display:grid;grid-template-columns:56px repeat(5,minmax(116px,1fr));min-width:660px;border-top:1px solid var(--line)}
+.grid>div{border-bottom:1px solid var(--line);border-left:1px solid var(--line);min-height:62px;padding:3px}
+.grid .hd{min-height:0;padding:8px 6px;font-weight:700;font-size:14px}
+.grid .hd.today{color:var(--pri)}
+.grid .tm{font-size:13px;color:var(--mute);text-align:right;padding:4px 8px 0 0;border-left:0;white-space:nowrap}
+.ap{width:100%;text-align:left;border:0;border-radius:8px;padding:5px 7px;font-size:13px;line-height:1.3;cursor:pointer;background:var(--c);color:#fff}
+.ap.sel{box-shadow:0 0 0 3px var(--ink)}
+.ap.new{animation:pop 1.2s ease 2}
+@keyframes pop{50%{box-shadow:0 0 0 4px var(--alert)}}
+@media(prefers-reduced-motion:reduce){.ap.new{animation:none}}
+.ap i{font-style:normal;display:inline-block;background:rgba(255,255,255,.25);border-radius:4px;padding:0 4px;margin:2px 2px 0 0;font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--mute);padding:0 18px 14px}
+.legend s{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);margin-right:6px;vertical-align:-1px}
+.q{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.q.u{border-color:var(--alert);background:var(--alertSoft)}
+.q p{margin:4px 0 8px}.tag{font-size:14px;font-weight:700}
+.empty{color:var(--mute);font-size:15px;margin:0}
+.prep{list-style:none;margin:0;padding:0}.prep li{display:flex;gap:10px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}.prep li span:last-child{color:var(--mute);white-space:nowrap}
+.dhead{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between;margin-bottom:16px}
+.dhead h2{font-size:clamp(26px,3.4vw,38px);max-width:24ch}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+@media(max-width:820px){.charts{grid-template-columns:minmax(0,1fr)}}
+.chart h3{margin-bottom:2px}.chart .lbl{margin:0 0 12px}
+.cols{display:flex;gap:6px;align-items:flex-end;height:220px;border-bottom:1px solid var(--line);padding-top:8px}
+.col{flex:1;display:flex;flex-direction:column-reverse;gap:2px;height:100%;cursor:default}
+.col div{background:var(--c);border-radius:0}.col div:last-child{border-radius:4px 4px 0 0}
+.col:hover div,.col:focus div{filter:brightness(1.12)}
+@media(max-width:600px){.xl .alt{visibility:hidden}}.xl{display:flex;gap:6px}.xl span{flex:1;text-align:center;font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden}
+.hb{display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr) 3em;gap:8px 10px;align-items:center;font-size:15px}
+.hb .tr{height:18px}.hb .tr div{height:100%;background:var(--c,var(--s1));border-radius:0 4px 4px 0;min-width:2px}
+.hb b{text-align:right;font-variant-numeric:tabular-nums}
+.meter{height:12px;background:var(--soft);border-radius:6px;overflow:hidden}.meter div{height:100%;background:var(--c)}
+.fig{position:relative;height:240px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#tip{position:fixed;z-index:9;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:8px;font-size:14px;display:none;white-space:pre-line;max-width:240px}
+details{margin-top:18px}summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+.smp{font-size:14px;color:var(--mute);margin:14px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><b>MediLingo</b><span>AI receptionist for Riverbend Family Health (a fictional clinic)</span></div>
+    <button class="b ghost" id="bigT" aria-pressed="false">Larger text</button>
+  </div>
+  <nav aria-label="Views">
+    <a href="#book" data-v="book">Book a visit</a>
+    <a href="#desk" data-v="desk">Front desk <span class="badge" id="nBadge"></span></a>
+    <a href="#dashboard" data-v="dashboard">Dashboard</a>
+  </nav>
+</header>
+<main>
+<section class="view" id="v-book" aria-label="Book a visit">
+ <div class="two">
+  <div class="pane">
+    <div class="ph">
+      <span class="lbl" id="howL">How would you like to talk?</span>
+      <div class="seg">
+        <button class="b" id="mText" aria-pressed="true">Text</button>
+        <button class="b" id="mAsl" aria-pressed="false">ASL video</button>
+        <select id="lang" aria-label="Language"><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option></select>
+      </div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div id="log" role="log" aria-live="polite"></div>
+    <div id="aslBar"><label><input type="file" id="aslFile" accept="video/*" capture="user"><span id="aslLbl">Upload or record an ASL clip</span></label></div>
+    <form class="cmp" id="cmp"><button type="button" class="b" id="backB">Back</button><input id="inp" autocomplete="off" aria-label="Message"><button class="b pri" id="sendB">Send</button><button type="button" class="b warn" id="staffB">Staff</button></form>
+    <p class="hint" id="hint"></p>
+  </div>
+  <div class="side">
+    <div class="pane pad card"><h3 id="sideT">Your appointment</h3><dl id="sum"></dl><div class="conf" id="conf"></div></div>
+    <div class="pane pad help">
+      <h3>Need a person?</h3>
+      <p>Tap <b>Staff</b> at any time and the front desk will answer you here by text.</p>
+      <p>For an emergency, call or text 911.</p>
+    </div>
+  </div>
+ </div>
+</section>
+
+<section class="view" id="v-desk" aria-label="Front desk">
+ <div class="two">
+  <div class="pane">
+    <div class="ph"><h2>This week's schedule</h2><button class="b" id="reset">Reset demo</button></div>
+    <div class="stats">
+      <div class="stat"><b id="sBook">0</b><span>new bookings from MediLingo</span></div>
+      <div class="stat"><b id="sWait">0</b><span>patients waiting for staff</span></div>
+      <div class="stat"><b id="sInt">0</b><span>visits needing an interpreter</span></div>
+    </div>
+    <div class="cal"><div class="grid" id="grid"></div></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="side">
+    <div class="pane pad"><h3>Waiting for staff</h3><div id="queue"></div></div>
+    <div class="pane pad"><h3>Selected appointment</h3><div id="detail"></div></div>
+    <div class="pane pad"><h3>Interpreter and access prep</h3><ul class="prep" id="prep"></ul></div>
+  </div>
+ </div>
+</section>
+
+<section class="view" id="v-dashboard" aria-label="Dashboard">
+  <div class="dhead">
+    <div><h2 id="dTitle"></h2><p class="lbl" id="dSub"></p></div>
+    <div class="seg" role="group" aria-label="Date range"><button class="b" data-r="4" aria-pressed="false">Last 4 weeks</button><button class="b" data-r="8" aria-pressed="true">Last 8 weeks</button></div>
+  </div>
+  <div class="pane"><div class="stats" id="kpis"></div></div>
+  <div class="charts">
+    <div class="pane pad chart"><h3>Bookings by channel</h3><p class="lbl">Appointments booked each week; staff phone calls are falling as MediLingo takes over</p>
+      <div class="cols" id="cBook"></div><div class="xl" id="cBookX"></div><div class="legend" style="padding:10px 0 0" id="cBookL"></div></div>
+    <div class="pane pad chart"><h3>Booking accuracy</h3><p class="lbl">Share of reviewed MediLingo bookings that staff marked correct; dashed line is the 95% goal</p>
+      <div class="fig"><svg id="cAcc" role="img" aria-label="Weekly booking accuracy line chart"></svg></div></div>
+    <div class="pane pad chart"><h3>Accommodations requested</h3><p class="lbl" id="cAccomS"></p><div class="hb" id="cAccom"></div></div>
+    <div class="pane pad chart"><h3>Languages used to book</h3><p class="lbl" id="cLangS"></p><div class="hb" id="cLang"></div></div>
+    <div class="pane pad chart"><h3>Why chats went to staff</h3><p class="lbl" id="cHandS"></p><div class="hb" id="cHand"></div></div>
+    <div class="pane pad chart"><h3>Provider schedule this week</h3><p class="lbl">Share of each provider's 35 open slots that are booked</p><div class="hb" id="cProv"></div></div>
+  </div>
+  <details class="pane pad"><summary>Show the numbers as a table</summary><div class="scroll"><table id="tbl"></table></div></details>
+  <p class="smp">Past weeks are sample data for the demo. This week updates live as you book visits and send chats to staff.</p>
+</section>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+{
+const T={
+en:{intro:"Hi, I'm MediLingo, the scheduling assistant for Riverbend Family Health. I can book your visit by text, ASL video, or in your language.",askR:"What is the visit for?",reasons:["Annual checkup","Sick visit","Follow-up","Vaccine or shot","Something else"],other:"Tell me in a few words what you need.",unclear:"Sorry, I didn't catch that. Tap an option, or describe it in a few words.",handoff:"I'm connecting you with our front desk. A staff member will reply here by text, usually within 15 minutes during office hours.",emergency:"This sounds urgent. If it is an emergency, call or text 911 now. I've also alerted our front desk.",slots:"Here are the next open times with {p}. Tap one:",more:"Show later times",askAcc:"Do you need anything for the visit? Choose all that apply, then tap Done.",acc:["ASL interpreter in person","Video interpreter (VRI)","Live captions (CART)","Spoken-language interpreter","Written notes during visit","Extra time","None needed"],done:"Done",askName:"What name should the appointment be under?",askContact:"Where should we send your confirmation? Type a mobile number for texts, or an email address.",badContact:"That doesn't look like a phone number or email. Please try again.",summary:"Everything look right? Check the card, then tap Book it.",book:"Book it",restart:"Start over",booked:"You're booked! Confirmation {c}.\nWe'll send a reminder to {t}. Your accommodations are on file, so the office will be ready when you arrive.",again:"Book another visit",ph:"Type your message",send:"Send",staff:"Staff",back:"Back",text:"Text",asl:"ASL video",aslUp:"Upload or record an ASL clip",aslNote:"Prototype: ASL recognition is simulated here. Pick the phrase your clip signs:",lab:["Visit","Provider","Time","Needs","Name","Contact"],none:"None",steps:["Visit","Time","Needs","Your details","Confirm"],side:"Your appointment",empty:"Not chosen yet",how:"How would you like to talk?",hint:"Type or tap an option. Tap Back to change an answer, or Staff to reach a person.",confL:"Confirmation"},
+es:{intro:"Hola, soy MediLingo, el asistente de citas de Riverbend Family Health. Puedo programar su cita por texto, video en ASL o en su idioma.",askR:"¿Para qué es la cita?",reasons:["Chequeo anual","Consulta por enfermedad","Seguimiento","Vacuna o inyección","Otra cosa"],other:"Dígame en pocas palabras qué necesita.",unclear:"Perdón, no entendí. Toque una opción o descríbalo en pocas palabras.",handoff:"Le estoy conectando con la recepción. Una persona del personal le responderá aquí por texto, normalmente en 15 minutos en horario de oficina.",emergency:"Esto parece urgente. Si es una emergencia, llame o envíe un texto al 911 ahora. También avisé a la recepción.",slots:"Estos son los próximos horarios disponibles con {p}. Toque uno:",more:"Ver horarios más tarde",askAcc:"¿Necesita algo para la cita? Elija todo lo que aplique y toque Listo.",acc:["Intérprete de ASL en persona","Intérprete por video (VRI)","Subtítulos en vivo (CART)","Intérprete de idioma","Notas escritas durante la cita","Tiempo adicional","No necesito nada"],done:"Listo",askName:"¿A nombre de quién hago la cita?",askContact:"¿Dónde enviamos la confirmación? Escriba un número de celular para mensajes de texto o un correo electrónico.",badContact:"Eso no parece un teléfono ni un correo. Inténtelo de nuevo.",summary:"¿Todo está bien? Revise la tarjeta y toque Confirmar.",book:"Confirmar",restart:"Empezar de nuevo",booked:"¡Cita confirmada! Confirmación {c}.\nEnviaremos un recordatorio a {t}. Sus adaptaciones quedaron registradas para que la clínica esté preparada cuando llegue.",again:"Programar otra cita",ph:"Escriba su mensaje",send:"Enviar",staff:"Personal",back:"Atrás",text:"Texto",asl:"Video ASL",aslUp:"Suba o grabe un video en ASL",aslNote:"Prototipo: aquí el reconocimiento de ASL es simulado. Elija la frase que se ve en su video:",lab:["Cita","Proveedor","Hora","Necesidades","Nombre","Contacto"],none:"Ninguna",steps:["Cita","Hora","Necesidades","Sus datos","Confirmar"],side:"Su cita",empty:"Aún no elegido",how:"¿Cómo prefiere comunicarse?",hint:"Escriba o toque una opción. Toque Atrás para cambiar una respuesta, o Personal para hablar con una persona.",confL:"Confirmación"},
+pt:{intro:"Olá, sou o MediLingo, o assistente de agendamento da Riverbend Family Health. Posso marcar sua consulta por texto, vídeo em ASL ou no seu idioma.",askR:"Qual é o motivo da consulta?",reasons:["Check-up anual","Consulta por doença","Retorno","Vacina ou injeção","Outra coisa"],other:"Conte em poucas palavras do que você precisa.",unclear:"Desculpe, não entendi. Toque em uma opção ou descreva em poucas palavras.",handoff:"Estou conectando você com a recepção. Alguém da equipe responderá aqui por texto, normalmente em 15 minutos no horário de atendimento.",emergency:"Isso parece urgente. Se for uma emergência, ligue ou envie mensagem para o 911 agora. Também avisei a recepção.",slots:"Estes são os próximos horários livres com {p}. Toque em um:",more:"Ver horários mais tarde",askAcc:"Você precisa de algo para a consulta? Escolha tudo o que se aplica e toque em Pronto.",acc:["Intérprete de ASL presencial","Intérprete por vídeo (VRI)","Legendas ao vivo (CART)","Intérprete de idioma","Anotações escritas na consulta","Tempo extra","Não preciso"],done:"Pronto",askName:"Em nome de quem devo marcar?",askContact:"Para onde enviamos a confirmação? Digite um celular para SMS ou um e-mail.",badContact:"Isso não parece um telefone ou e-mail. Tente de novo.",summary:"Está tudo certo? Confira o cartão e toque em Confirmar.",book:"Confirmar",restart:"Recomeçar",booked:"Consulta marcada! Confirmação {c}.\nEnviaremos um lembrete para {t}. Suas adaptações estão registradas, então a clínica estará pronta quando você chegar.",again:"Marcar outra consulta",ph:"Digite sua mensagem",send:"Enviar",staff:"Equipe",back:"Voltar",text:"Texto",asl:"Vídeo ASL",aslUp:"Envie ou grave um vídeo em ASL",aslNote:"Protótipo: o reconhecimento de ASL é simulado aqui. Escolha a frase do seu vídeo:",lab:["Consulta","Profissional","Horário","Necessidades","Nome","Contato"],none:"Nenhuma",steps:["Consulta","Horário","Necessidades","Seus dados","Confirmar"],side:"Sua consulta",empty:"Ainda não escolhido",how:"Como prefere se comunicar?",hint:"Digite ou toque em uma opção. Toque em Voltar para mudar uma resposta, ou Equipe para falar com uma pessoa.",confL:"Confirmação"}};
+const LN={en:"English",es:"Spanish",pt:"Portuguese"},LOC={en:"en-US",es:"es-US",pt:"pt-BR"};
+const PROV=[{n:"Dr. Amara Patel",c:"#2340d9"},{n:"Dr. Luis Nguyen",c:"#7a3fd1"},{n:"Nurse Jo Rivera",c:"#0b7f86"}];
+const RPROV=[0,1,0,2,1];
+const ACC_SHORT=["ASL","VRI","CART","Interp","Notes","Time+"];
+const KW=[/check.?up|physical|annual|chequeo|anual|rotina/i,/sick|fever|cough|pain|\bill\b|enferm|fiebre|tos|dolor|doente|febre|dor/i,/follow|seguim|retorno|results|resultado/i,/vaccin|vacun|vacin|shot|inyec|inje|booster/i];
+const URG=/chest pain|can'?t breathe|cannot breathe|trouble breathing|stroke|bleeding a lot|overdose|suicid|dolor de pecho|no puedo respirar|dor no peito|não consigo respirar/i;
+const HUMAN=/\b(human|person|staff|receptionist|persona|personal|humano|pessoa|equipe|atendente|recepci)/i;
+const HOURS=[9,10,11,13,14,15,16];
+const STEP_IX={reason:0,other:0,slot:1,acc:2,name:3,contact:3,confirm:4,end:5,handed:-1};
+const ORDER=["reason","slot","acc","name","contact"];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mon=(()=>{const d=new Date();d.setHours(0,0,0,0);const w=d.getDay();d.setDate(d.getDate()+(w===0?1:w===6?2:1-w));return d})();
+const day=i=>{const d=new Date(mon);d.setDate(d.getDate()+i);return d};
+const todayIx=(()=>{const n=new Date();n.setHours(0,0,0,0);return Math.round((n-mon)/864e5)})();
+const fmt=(di,h,l)=>{const d=day(di);d.setHours(h);return d.toLocaleString(LOC[l||lang],{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})};
+const seed=()=>[[0,9,0,"Maria L.",0,[],"ok","Text","en"],[0,13,1,"Dev S.",1,[1],"ok","ASL video","en"],[1,10,0,"Grace H.",2,[0,5],"ok","ASL video","en"],[1,14,2,"Tomás R.",3,[3],null,"Text","es"],[2,11,1,"Ken O.",1,[2],"ok","Text","en"],[3,9,0,"Ana P.",0,[3,4],null,"Text","pt"],[3,15,2,"Sam W.",3,[],"ok","Phone (staff)","en"],[4,10,1,"Lee C.",2,[0],null,"ASL video","en"]].map(([d,h,p,name,r,acc,rev,via,lang])=>({d,h,p,name,r,acc,rev,via,lang,sample:true}));
+let appts=seed(),queue=[],hlog=[],lang="en",asl=false,st,sel=null,newId=null,range=8,unseen=0;
+const t=k=>T[lang][k];
+const log=$("log");
+/* ---------- patient chat ---------- */
+function add(cls,html){const e=document.createElement("div");e.className=cls;e.innerHTML=html;log.appendChild(e);log.scrollTop=log.scrollHeight;return e}
+const bot=(s,x="")=>add("m bot"+x,esc(s));
+function chips(list,fn,multi,big){const w=add("chips"+(big?" big":""),"");list.forEach((l,i)=>{const b=document.createElement("button");b.className="b";b.textContent=l;b.type="button";if(multi)b.setAttribute("aria-pressed",String(multi.has(i)));b.onclick=()=>fn(i,b,w);w.appendChild(b)});return w}
+const kill=()=>log.querySelectorAll(".chips button").forEach(b=>b.disabled=true);
+function start(){log.innerHTML="";st={step:"reason",tries:0,acc:new Set(),offset:0,history:[],t0:Date.now()};if(lang!=="en")st.acc.add(3);if(asl)st.acc.add(0);bot(t("intro"));ask("reason")}
+function ask(step){st.step=step;st.tries=0;
+ if(step==="reason")bot(t("askR")),chips(t("reasons"),i=>{kill();me(t("reasons")[i]);pickReason(i)},null,true);
+ else if(step==="other")bot(t("other"));
+ else if(step==="slot"){st.offset=0;offer()}
+ else if(step==="acc")accChips();
+ else if(step==="name")bot(t("askName"));
+ else if(step==="contact")bot(t("askContact"));
+ else if(step==="confirm"){bot(t("summary"));chips([t("book"),t("restart")],i=>{kill();if(i){start();return}book()})}
+ side()}
+function pickReason(i){if(i===4){st.note="";ask("other");return}st.r=i;st.p=RPROV[i];ask("slot")}
+function free(p){const out=[];for(let d=Math.max(0,todayIx+1);d<5;d++)for(const h of HOURS)if(!appts.some(a=>a.d===d&&a.h===h&&a.p===p))out.push([d,h]);return out.length?out:[[4,16]]}
+function offer(){const all=free(st.p),f=all.slice(st.offset,st.offset+4);st.opts=f;bot(t("slots").replace("{p}",PROV[st.p].n));const labs=f.map(([d,h])=>fmt(d,h));if(all.length>st.offset+4)labs.push(t("more"));chips(labs,i=>{kill();if(i===f.length){st.offset+=4;offer();return}me(labs[i]);pickSlot(i)},null,true)}
+function pickSlot(i){st.slot=st.opts[i];ask("acc")}
+function accChips(){const o=t("acc");bot(t("askAcc"));chips([...o,t("done")],(i,b,w)=>{const bs=w.querySelectorAll("button");if(i===o.length){kill();me([...st.acc].map(k=>o[k]).join(", ")||t("none"));ask("name");return}if(i===o.length-1){st.acc.clear();bs.forEach(x=>x.setAttribute("aria-pressed","false"));b.setAttribute("aria-pressed","true");side();return}bs[o.length-1].setAttribute("aria-pressed","false");st.acc.has(i)?st.acc.delete(i):st.acc.add(i);b.setAttribute("aria-pressed",String(st.acc.has(i)));side()},st.acc)}
+const accText=(set,l)=>{const o=T[l].acc;return [...set].map(k=>k===3?o[k]+" ("+LN[l]+")":o[k]).join(", ")}
+function side(){const L=t("lab"),E=t("empty");const v=[st.r!=null?t("reasons")[st.r]+(st.note?" ("+st.note+")":""):"",st.p!=null?PROV[st.p].n:"",st.slot?fmt(...st.slot):"",STEP_IX[st.step]>=2||st.acc.size?accText(st.acc,lang)||t("none"):"",st.name||"",st.contact||""];
+ $("sum").innerHTML=v.map((x,i)=>"<dt>"+esc(L[i])+"</dt><dd"+(x?"":' class="no"')+">"+esc(x||E)+"</dd>").join("");
+ const ix=STEP_IX[st.step];$("steps").innerHTML=t("steps").map((s,i)=>'<li class="'+(i<ix?"done":i===ix?"cur":"")+'"'+(i===ix?' aria-current="step"':"")+">"+esc(s)+"</li>").join("");
+ $("backB").disabled=!["other","slot","acc","name","contact","confirm"].includes(st.step);
+ $("conf").style.display=st.code?"block":"none";$("conf").textContent=st.code?t("confL")+": "+st.code:""}
+function book(){const code="ML-"+Math.random().toString(36).slice(2,6).toUpperCase();const a={d:st.slot[0],h:st.slot[1],p:st.p,name:st.name,r:st.r,note:st.note,acc:[...st.acc].filter(k=>k<6),rev:null,sample:false,lang,code,contact:st.contact,via:asl?"ASL video":"Text",secs:Math.round((Date.now()-st.t0)/1000),at:Date.now()};appts.push(a);newId=a;sel=a;st.code=code;unseen++;render();bot(t("booked").replace("{c}",code).replace("{t}",st.contact));st.step="end";side();chips([t("again")],()=>{kill();start()})}
+function handoff(kind,msg){const urgent=kind==="urgent";bot(urgent?t("emergency"):t("handoff"),urgent?" urg":"");const h={kind,msg,lang,via:asl?"ASL video":"Text",time:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})};queue.unshift(h);hlog.push(h);unseen++;st.step="handed";render();side();chips([t("restart")],()=>{kill();start()})}
+function me(s){add("m me",esc(s));st.history.push(s)}
+function handle(s){me(s);if(URG.test(s)){kill();handoff("urgent",s);return}if(HUMAN.test(s)){kill();handoff("requested",s);return}
+ const x=s.trim();
+ if(st.step==="reason"||st.step==="other"){let i=KW.findIndex(r=>r.test(x));if(st.step==="other"&&x.length>2){st.note=x.slice(0,60);i=i<0?1:i}if(i>=0){kill();st.r=i;st.p=RPROV[i];ask("slot");return}miss();return}
+ if(st.step==="slot"){const n=parseInt(x,10);if(n>=1&&n<=st.opts.length){kill();pickSlot(n-1);return}miss();return}
+ if(st.step==="acc"){bot(t("unclear"));return}
+ if(st.step==="name"){if(x.length<2){bot(t("askName"));return}st.name=x.slice(0,40);ask("contact");return}
+ if(st.step==="contact"){const ph=x.replace(/\D/g,"");if(/^\S+@\S+\.\S+$/.test(x)||ph.length>=10){st.contact=x.slice(0,50);ask("confirm")}else bot(t("badContact"));return}
+ bot(t("unclear"))}
+function miss(){st.tries++;if(st.tries>=3){kill();handoff("unclear",st.history.slice(-1)[0]);return}bot(t("unclear"))}
+$("cmp").onsubmit=e=>{e.preventDefault();const v=$("inp").value.trim();if(!v||st.step==="end"||st.step==="handed")return;$("inp").value="";handle(v)};
+$("backB").onclick=()=>{const cur=st.step==="other"?"reason":st.step==="confirm"?"contact":st.step;const i=ORDER.indexOf(cur);if(st.step==="confirm"){kill();ask("contact");return}if(st.step==="other"){ask("reason");return}if(i<=0)return;kill();const prev=ORDER[i-1];if(prev==="reason"){st.r=null;st.p=null;st.note=""}if(prev==="slot")st.slot=null;if(prev==="name")st.name="";ask(prev)};
+$("staffB").onclick=()=>{if(st.step==="handed")return;kill();me(t("staff"));handoff("requested","Tapped the Staff button")};
+function setMode(a){asl=a;$("mText").setAttribute("aria-pressed",String(!a));$("mAsl").setAttribute("aria-pressed",String(a));$("aslBar").style.display=a?"block":"none";if(a&&!st.acc.has(1))st.acc.add(0);side()}
+$("mText").onclick=()=>setMode(false);$("mAsl").onclick=()=>setMode(true);
+$("aslFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const v=document.createElement("video");v.src=URL.createObjectURL(f);v.controls=true;v.muted=true;log.appendChild(v);e.target.value="";aslPick()};
+function aslPick(){let opts;const s=st.step;if(s==="reason"||s==="other")opts=t("reasons").slice(0,4).map((l,i)=>[l,()=>{st.r=i;st.p=RPROV[i];ask("slot")}]);else if(s==="slot")opts=st.opts.map(([d,h],i)=>[fmt(d,h),()=>pickSlot(i)]);else if(s==="name")opts=[["Jordan Lee",()=>{st.name="Jordan Lee";ask("contact")}]];else if(s==="contact")opts=[["jordan.lee@example.com",()=>{st.contact="jordan.lee@example.com";ask("confirm")}]];else opts=[[t("staff"),()=>handoff("requested","ASL clip")]];bot(t("aslNote"));chips(opts.map(o=>o[0]),i=>{kill();me(opts[i][0]);opts[i][1]()})}
+function applyLang(){document.documentElement.lang=lang;$("inp").placeholder=t("ph");$("sendB").textContent=t("send");$("staffB").textContent=t("staff");$("backB").textContent=t("back");$("mText").textContent=t("text");$("mAsl").textContent=t("asl");$("aslLbl").textContent=t("aslUp");$("howL").textContent=t("how");$("hint").textContent=t("hint");$("sideT").textContent=t("side")}
+$("lang").onchange=e=>{lang=e.target.value;applyLang();start();if(asl)setMode(true)};
+$("bigT").onclick=e=>{const on=document.documentElement.classList.toggle("big");e.currentTarget.setAttribute("aria-pressed",String(on));try{localStorage.setItem("mlBig",on?"1":"")}catch(_){}};
+try{if(localStorage.getItem("mlBig")){document.documentElement.classList.add("big");$("bigT").setAttribute("aria-pressed","true")}}catch(_){}
+$("reset").onclick=()=>{appts=seed();queue=[];hlog=[];sel=null;newId=null;unseen=0;render();start()};
+/* ---------- front desk ---------- */
+function render(){
+ const g=$("grid");let h='<div class="hd"></div>'+[0,1,2,3,4].map(i=>'<div class="hd'+(i===todayIx?" today":"")+'">'+esc(day(i).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}))+(i===todayIx?" (today)":"")+"</div>").join("");
+ HOURS.forEach(hr=>{h+='<div class="tm">'+(hr>12?hr-12:hr)+(hr<12?" am":" pm")+"</div>";for(let d=0;d<5;d++){h+="<div>"+appts.map((a,i)=>[a,i]).filter(([a])=>a.d===d&&a.h===hr).map(([a,i])=>'<button class="ap'+(a===newId?" new":"")+(a===sel?" sel":"")+'" style="--c:'+PROV[a.p].c+'" data-i="'+i+'" aria-label="'+esc(a.name+", "+T.en.reasons[a.r]+", "+fmt(a.d,a.h,"en"))+'">'+esc(a.name)+(a.sample?" · sample":"")+"<br>"+esc(T.en.reasons[a.r])+"<br>"+a.acc.map(k=>"<i>"+(k===3?"Interp "+esc(LN[a.lang]):ACC_SHORT[k])+"</i>").join("")+"</button>").join("")+"</div>"}});
+ g.innerHTML=h;g.querySelectorAll(".ap").forEach(b=>b.onclick=()=>{sel=appts[+b.dataset.i];newId=null;render()});
+ $("legend").innerHTML=PROV.map(p=>'<span style="--c:'+p.c+'"><s></s>'+esc(p.n)+"</span>").join("")+"<span>Badges: ASL interpreter, VRI, CART captions, spoken interpreter, written notes, extra time</span>";
+ $("sBook").textContent=appts.filter(a=>!a.sample).length;$("sWait").textContent=queue.length;
+ const needs=appts.filter(a=>a.acc.some(k=>k<4));$("sInt").textContent=needs.length;
+ $("queue").innerHTML=queue.length?queue.map((q,i)=>'<div class="q'+(q.kind==="urgent"?" u":"")+'"><span class="tag">'+(q.kind==="urgent"?"Urgent: possible emergency":q.kind==="unclear"?"MediLingo could not understand":"Patient asked for a person")+"</span><br><span class=lbl>"+esc(q.time)+" · "+esc(LN[q.lang])+" · "+esc(q.via)+"</span><p>“"+esc(q.msg||"")+'”</p><button class="b" data-q="'+i+'">Mark handled</button></div>').join(""):'<p class="empty">No one is waiting. Urgent messages, unclear requests and Staff taps show up here.</p>';
+ $("queue").querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{queue.splice(+b.dataset.q,1);render()});
+ $("prep").innerHTML=needs.length?needs.slice().sort((a,b)=>a.d-b.d||a.h-b.h).map(a=>"<li><span><b>"+esc(a.acc.filter(k=>k<4).map(k=>k===3?LN[a.lang]+" interpreter":["ASL interpreter","Video interpreter","CART captioner"][k]).join(", "))+"</b> for "+esc(a.name)+"</span><span>"+esc(fmt(a.d,a.h,"en"))+"</span></li>").join(""):'<li class="empty">No interpreters needed this week.</li>';
+ renderDetail();$("nBadge").textContent=unseen&&view!=="desk"?unseen:"";drawDash()}
+function renderDetail(){const a=sel,el=$("detail");if(!a||!appts.includes(a)){el.innerHTML='<p class="empty">Tap an appointment in the calendar to see what the patient needs and to check MediLingo\'s booking.</p>';return}
+ el.innerHTML='<b>'+esc(a.name)+"</b>"+(a.sample?" (sample)":" · "+esc(a.code))+"<p>"+esc(T.en.reasons[a.r])+(a.note?" ("+esc(a.note)+")":"")+" with "+esc(PROV[a.p].n)+"<br>"+esc(fmt(a.d,a.h,"en"))+"<br>Needs: "+esc(accText(new Set(a.acc),"en")||"None")+"<br>Booked by "+esc(a.via)+" in "+esc(LN[a.lang])+(a.contact?"<br>Confirmation sent to "+esc(a.contact):"")+'</p><span class="tag">Review: '+(a.rev==="ok"?"booked correctly":a.rev==="fix"?"needs a fix":"not reviewed yet")+'</span><div class="seg" style="margin-top:8px"><button class="b" id="rOk">Booked correctly</button><button class="b warn" id="rFix">Needs a fix</button></div>';
+ $("rOk").onclick=()=>{a.rev="ok";render()};$("rFix").onclick=()=>{a.rev="fix";render()}}
+/* ---------- dashboard ---------- */
+const H={text:[6,9,11,14,15,18,21],asl:[1,2,2,3,4,4,6],staff:[38,36,35,31,30,28,26],acc:[86,88,89,91,92,94,95],mins:[4.1,3.8,3.6,3.3,3.1,2.9,2.8],unclear:[4,4,3,3,2,2,2],req:[2,2,3,2,2,1,2],urg:[1,0,1,0,0,1,0],need:[3,2,1,6,2,1]};
+function weeks(){const W=[];for(let w=0;w<8;w++){const cur=w===7;const lab=day(-(7-w)*7).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+ if(!cur){const tot=H.text[w]+H.asl[w];W.push({lab,text:H.text[w],asl:H.asl[w],staff:H.staff[w],acc:H.acc[w],mins:H.mins[w],unclear:H.unclear[w],req:H.req[w],urg:H.urg[w],need:H.need.map((n,k)=>n+(w%3===k%3?1:0)),lang:{en:Math.round(tot*.7),es:Math.round(tot*.22),pt:tot-Math.round(tot*.7)-Math.round(tot*.22)}});continue}
+ const ml=appts.filter(a=>a.via!=="Phone (staff)"),rv=appts.filter(a=>a.rev&&a.via!=="Phone (staff)"),live=appts.filter(a=>a.secs);
+ const need=[0,0,0,0,0,0];appts.forEach(a=>a.acc.forEach(k=>need[k]++));const lg={en:0,es:0,pt:0};ml.forEach(a=>lg[a.lang]++);
+ W.push({lab:lab+" (now)",text:ml.filter(a=>a.via==="Text").length,asl:ml.filter(a=>a.via==="ASL video").length,staff:appts.length-ml.length,acc:rv.length?Math.round(100*rv.filter(a=>a.rev==="ok").length/rv.length):null,mins:live.length?live.reduce((s,a)=>s+a.secs,0)/live.length/60:null,unclear:hlog.filter(x=>x.kind==="unclear").length,req:hlog.filter(x=>x.kind==="requested").length,urg:hlog.filter(x=>x.kind==="urgent").length,need,lang:lg})}
+ return W.slice(8-range)}
+const sum=(W,k)=>W.reduce((s,w)=>s+w[k],0);
+const pct=x=>Math.round(x)+"%";
+function hbars(el,rows,max,c){el.innerHTML=rows.map(([l,v,tip])=>"<span>"+esc(l)+'</span><div class="tr" tabindex="0" data-tip="'+esc(tip||l+": "+v)+'"><div style="width:'+(max?100*v/max:0)+"%;"+(c?"--c:"+c:"")+'"></div></div><b>'+v+"</b>").join("")}
+function drawDash(){if(view!=="dashboard")return;const W=weeks(),last=W[W.length-2],prev=W[W.length-3],first=W[0];
+ const ml=w=>w.text+w.asl,share=w=>100*ml(w)/(ml(w)+w.staff||1);
+ $("dTitle").textContent="MediLingo now books "+pct(share(last))+" of appointments without a phone call, up from "+pct(share(first.lab.includes("now")?last:first));
+ $("dSub").textContent="Week of "+last.lab+" is the latest full week. Staff phone bookings fell from "+first.staff+" to "+last.staff+" a week over this range.";
+ const totML=W.reduce((s,w)=>s+ml(w),0),hand=W.reduce((s,w)=>s+w.unclear+w.req+w.urg,0),selfR=100*totML/(totML+hand||1);
+ const ch=(a,b,unit,inv)=>{const d=a-b;if(!d)return "";const good=inv?d<0:d>0;return ' <em class="'+(good?"up":"dn")+'">'+(d>0?"+":"")+(unit==="m"?d.toFixed(1):Math.round(d))+(unit==="%"?" pts":unit==="m"?" min":"")+" vs prior week</em>"};
+ const accs=W.filter(w=>w.acc!=null);
+ $("kpis").innerHTML=[[totML,"booked by MediLingo",ch(ml(last),ml(prev))],[pct(selfR),"finished without staff help",""],[last.acc+"%","booking accuracy, latest week",ch(last.acc,prev.acc,"%")],[last.mins.toFixed(1)+" min","average time to book",ch(last.mins,prev.mins,"m",true)],[hand,"chats sent to staff",""]].map(([v,l,c])=>'<div class="stat"><b>'+v+"</b><span>"+l+"</span>"+(c?"<br>"+c:"")+"</div>").join("");
+ const mx=Math.max(...W.map(w=>ml(w)+w.staff));const S=[["text","Text chat","--s1"],["asl","ASL video","--s2"],["staff","Staff phone call","--s3"]];
+ $("cBook").innerHTML=W.map(w=>'<div class="col" tabindex="0" data-tip="'+esc("Week of "+w.lab+"\nText chat: "+w.text+"\nASL video: "+w.asl+"\nStaff phone: "+w.staff)+'">'+S.map(([k,,c])=>w[k]?'<div style="height:'+(100*w[k]/mx)+"%;--c:var("+c+')"></div>':"").join("")+"</div>").join("");
+ $("cBookX").innerHTML=W.map((w,i)=>"<span"+(i%2&&W.length>4?' class="alt"':"")+">"+esc(w.lab.replace(" (now)",""))+"</span>").join("");
+ $("cBookL").innerHTML=S.map(([,l,c])=>'<span style="--c:var('+c+')"><s></s>'+l+"</span>").join("");
+ const accN=[0,1,2,3,4,5].map(k=>sum(W.map(w=>({v:w.need[k]})),"v")),o=T.en.acc;
+ $("cAccomS").textContent="Requests recorded at booking, last "+range+" weeks. These tell the desk who to call ahead of time.";
+ hbars($("cAccom"),accN.map((v,k)=>[o[k],v]).sort((a,b)=>b[1]-a[1]),Math.max(...accN));
+ const lg={en:0,es:0,pt:0};W.forEach(w=>{for(const k in lg)lg[k]+=w.lang[k]});const lt=lg.en+lg.es+lg.pt||1;
+ $("cLangS").textContent=pct(100*(lg.es+lg.pt)/lt)+" of MediLingo bookings were made in a language other than English.";
+ hbars($("cLang"),[["English",lg.en],["Spanish",lg.es],["Portuguese",lg.pt]].map(([l,v])=>[l,v,l+": "+v+" ("+pct(100*v/lt)+")"]),Math.max(lg.en,lg.es,lg.pt));
+ const hd=[["Couldn't understand",sum(W,"unclear")],["Asked for a person",sum(W,"req")],["Possible emergency",sum(W,"urg")]];
+ $("cHandS").textContent="Every one of these reached a staff member; possible emergencies were also told to call or text 911.";
+ hbars($("cHand"),hd,Math.max(...hd.map(x=>x[1]),1));
+ const pv=PROV.map((p,i)=>{const n=appts.filter(a=>a.p===i).length;return[p.n,Math.round(100*n/35),p.n+": "+n+" of 35 slots booked",p.c]});
+ $("cProv").innerHTML=pv.map(([l,v,tip,c])=>"<span>"+esc(l)+'</span><div class="meter" tabindex="0" data-tip="'+esc(tip)+'"><div style="width:'+v+"%;--c:"+c+'"></div></div><b>'+v+"%</b>").join("");
+ drawAcc(accs);
+ $("tbl").innerHTML="<tr><th>Week of</th><th>Text</th><th>ASL video</th><th>Staff phone</th><th>Accuracy</th><th>Avg. min to book</th><th>Sent to staff</th></tr>"+W.map(w=>"<tr><td>"+esc(w.lab)+"</td><td>"+w.text+"</td><td>"+w.asl+"</td><td>"+w.staff+"</td><td>"+(w.acc==null?"–":w.acc+"%")+"</td><td>"+(w.mins==null?"–":w.mins.toFixed(1))+"</td><td>"+(w.unclear+w.req+w.urg)+"</td></tr>").join("")}
+const svg=$("cAcc");let accData=[];
+function drawAcc(d){accData=d||accData;const s=svg,W=s.clientWidth,Hh=s.clientHeight;if(!W)return;const L=34,R=12,Tp=10,B=26,hi=100,lo=Math.min(80,5*Math.floor((Math.min(...accData.map(w=>w.acc))-5)/5));
+ const x=i=>L+(accData.length<2?0:i*(W-L-R)/(accData.length-1)),y=v=>Tp+(hi-v)*(Hh-Tp-B)/(hi-lo);
+ let h="";[lo,lo+(hi-lo)/4,lo+(hi-lo)/2,lo+3*(hi-lo)/4,hi,95].filter((v,i,a)=>a.indexOf(v)===i).forEach(v=>{h+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"'+(v===95?' stroke-dasharray="5 4" stroke="var(--mute)"':"")+'/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="12" fill="var(--mute)">'+v+"</text>"});
+ h+='<polyline fill="none" stroke="var(--s1)" stroke-width="2" points="'+accData.map((w,i)=>x(i)+","+y(Math.max(lo,w.acc))).join(" ")+'"/>';
+ const step=W<520?2:1;accData.forEach((w,i)=>{if(i%step===0||i===accData.length-1)h+='<text x="'+x(i)+'" y="'+(Hh-6)+'" text-anchor="middle" font-size="12" fill="var(--mute)">'+esc(w.lab.replace(" (now)",""))+"</text>";h+='<circle cx="'+x(i)+'" cy="'+y(Math.max(lo,w.acc))+'" r="5" fill="var(--s1)" stroke="var(--card)" stroke-width="2"/><circle cx="'+x(i)+'" cy="'+y(Math.max(lo,w.acc))+'" r="14" fill="transparent" tabindex="0" data-tip="'+esc("Week of "+w.lab+(w.lab.includes("now")?", so far":"")+": "+w.acc+"% correct")+'"/>'});
+ s.innerHTML=h}
+const ro=new ResizeObserver(()=>drawAcc());ro.observe(svg);
+document.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{range=+b.dataset.r;document.querySelectorAll("[data-r]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));drawDash()});
+const tip=$("tip");
+const showTip=(el,x,y)=>{tip.textContent=el.dataset.tip;tip.style.display="block";const r=tip.getBoundingClientRect();tip.style.left=Math.min(innerWidth-r.width-8,x+14)+"px";tip.style.top=Math.max(8,y-r.height-10)+"px"};
+document.addEventListener("mousemove",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");el?showTip(el,e.clientX,e.clientY):tip.style.display="none"});
+document.addEventListener("focusin",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");if(el){const r=el.getBoundingClientRect();showTip(el,r.left+r.width/2,r.top)}else tip.style.display="none"});
+/* ---------- views ---------- */
+let view="book";
+function route(){const v=(location.hash||"#book").slice(1);view=["book","desk","dashboard"].includes(v)?v:"book";document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+view));document.querySelectorAll("nav a").forEach(a=>a.dataset.v===view?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));if(view==="desk")unseen=0;tip.style.display="none";render()}
+addEventListener("hashchange",route);
+applyLang();start();route();
+}
+</script>
+</body>
+</html>
